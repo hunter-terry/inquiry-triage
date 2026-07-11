@@ -33,6 +33,17 @@ without the token gets a clean `403`; a request with the correct token
 works normally. `playbooks/automation-platforms.md` updated with the
 rules that would have caught this earlier.
 
+## Where I'm at right now (update, 2026-07-11)
+Model portability fix: the workflow hardcoded `llama3.1:8b` because
+that's what fits this machine's RAM specifically — not a safe
+assumption for a portfolio piece meant to be cloned onto other
+machines. Added a RAM-based model selection table to the README. Also
+found and fixed a real bug while testing this: a "model not pulled"
+error from Ollama was being caught by the same generic handler as
+"Ollama unreachable," so it showed a misleading message. Now gives a
+distinct, accurate message. Verified both ways with a real (temporarily
+broken) test run before reverting to the working model.
+
 ## Steps / plan
 - ~~Get n8n running locally via npx (no Docker)~~ — done
 - ~~Webhook node -> Ollama draft + classify~~ — done

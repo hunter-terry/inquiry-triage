@@ -71,6 +71,24 @@ holds the line.
 Requirements: [n8n](https://n8n.io) (self-hosted, no account needed),
 [Ollama](https://ollama.com) with a model pulled.
 
+### Choosing a model for your machine
+
+The workflow defaults to `llama3.1:8b`, which needs ~5GB of RAM
+headroom beyond your OS and other apps. Pick based on what you've
+actually got:
+
+| Total RAM | Suggested model |
+|---|---|
+| ~8GB | `llama3.2:3b` |
+| ~16GB | `llama3.1:8b` (default) |
+| 32GB+ | a larger model, e.g. `llama3.1:70b` or `mixtral` |
+
+Rule of thumb, not a hard rule — check with `ollama list` after
+pulling. To use a different model, edit the `model` field inside the
+"Ollama Draft + Classify" node's JSON body. If the configured model
+isn't pulled, the workflow now says so specifically instead of the
+misleading "Ollama unreachable" it used to show.
+
 The Code nodes need Node's `fs`, `path`, and `os` built-ins to write
 review-queue files — n8n blocks these by default, so allow them before
 starting:
