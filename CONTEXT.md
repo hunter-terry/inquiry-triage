@@ -23,6 +23,16 @@ and flagged correctly. 2 real bugs found in testing and fixed:
   explicit error handling in the validation node, matching the same
   refusal-path discipline as `listit.py`/`autosummary.py`.
 
+## Where I'm at right now (update, 2026-07-11)
+Security review after publishing: the webhook had no authentication —
+anyone with the URL could fire it, which violates the vault's own
+`playbooks/automation-platforms.md` rule ("webhook URLs are secrets").
+Fixed by adding n8n Header Auth (credential stored in n8n's credential
+store, never in the workflow file or the repo). Confirmed a request
+without the token gets a clean `403`; a request with the correct token
+works normally. `playbooks/automation-platforms.md` updated with the
+rules that would have caught this earlier.
+
 ## Steps / plan
 - ~~Get n8n running locally via npx (no Docker)~~ — done
 - ~~Webhook node -> Ollama draft + classify~~ — done
@@ -33,7 +43,8 @@ and flagged correctly. 2 real bugs found in testing and fixed:
   validation~~ — done
 - ~~Export workflow.json, screenshots, short demo, README~~ — workflow.json
   and README done; screenshot/demo left as a manual step (see README)
-- QA checklist, push to new GitHub repo — in progress
+- ~~QA checklist, push to new GitHub repo~~ — done
+- ~~Add webhook authentication~~ — done, see above
 
 ## Notes
 - n8n CLI edits (`import:workflow`, `update:workflow --active`) need a

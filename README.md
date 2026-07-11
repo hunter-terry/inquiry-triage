@@ -90,6 +90,17 @@ macOS/Linux:
 NODE_FUNCTION_ALLOW_BUILTIN=fs,path,os npx n8n
 ```
 
+The webhook requires a secret header token — anyone with the URL but
+without the token gets rejected. Copy `credentials.example.json` to
+`credentials.json`, replace the placeholder with your own random
+string, then import it (never commit `credentials.json` — it's
+gitignored):
+```
+cp credentials.example.json credentials.json
+# edit credentials.json, replace the placeholder value
+npx n8n import:credentials --input=credentials.json
+```
+
 Then, with n8n running:
 ```
 npx n8n import:workflow --input=workflow.json
@@ -105,12 +116,15 @@ different folder, edit the `baseDir` line in the "Write to Review Queue
 or Flagged" node — n8n's Code node sandbox has no `process` global, so
 this can't be set via environment variable.
 
-Send a test inquiry:
+Send a test inquiry (replace `YOUR_TOKEN` with the value from your
+`credentials.json`):
 ```
 curl -X POST http://localhost:5678/webhook/inquiry \
   -H "Content-Type: application/json" \
+  -H "X-Webhook-Token: YOUR_TOKEN" \
   -d "{\"message\": \"Hi, I'm interested in your services.\"}"
 ```
+A request without the correct header gets a clean `403`, not access.
 
 ## Safety guarantees
 
@@ -121,6 +135,9 @@ curl -X POST http://localhost:5678/webhook/inquiry \
 - Failures (bad input, AI unreachable, rule violations) are logged with
   a specific, plain-language reason and routed to `flagged/` — never
   silently dropped, never crash the workflow.
+- The webhook requires a secret header token, stored in n8n's
+  credential store — never hardcoded in the workflow file, never
+  committed to the repo.
 
 ## Folders
 
