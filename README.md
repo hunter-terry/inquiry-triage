@@ -163,4 +163,4 @@ A request without the correct header gets a clean `403`, not access.
 - `test-inquiries/` — the real test cases and results
 - `review-queue/` / `flagged/` — runtime output (gitignored, not
   shipped with the repo)
-- `docs/` — architecture notes
+- `docs/walkthrough.html` — plain-language, client-facing demo page with two real captured runs

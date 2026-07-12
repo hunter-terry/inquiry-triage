@@ -44,6 +44,23 @@ error from Ollama was being caught by the same generic handler as
 distinct, accurate message. Verified both ways with a real (temporarily
 broken) test run before reverting to the working model.
 
+## Where I'm at right now (update, 2026-07-12)
+Built `docs/walkthrough.html` — a plain-language, client-facing demo
+page (two live runs captured, including the prompt-injection case that
+got caught and blocked) for portfolio/Upwork use, published as a
+shareable Claude Artifact — see the vault's `job-search/upwork-profile.md`
+for the live link. While capturing it, found this
+n8n instance (on the rebuilt Windows machine) has **no credentials at
+all** in its database — the Header Auth credential documented above on
+2026-07-11 never made it into this environment (likely lost in the
+post-MacBook rebuild, not a regression from anything done today).
+`workflow.json`'s `headerAuth` config is untouched and correct; the
+webhook currently fails with "No authentication data defined on node!"
+until a real credential is created in this n8n instance and attached to
+the Webhook node's Authentication field. Not urgent (no client relying
+on this instance), but do this before treating this environment's
+n8n as ready to demo live to anyone.
+
 ## Steps / plan
 - ~~Get n8n running locally via npx (no Docker)~~ — done
 - ~~Webhook node -> Ollama draft + classify~~ — done
