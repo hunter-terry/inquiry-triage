@@ -25,6 +25,55 @@
     },
     {
       "parameters": {
+        "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst os = require('os');\n\n// Global sliding-window request cap on the public webhook - not per-IP\n// (n8n's Webhook node doesn't cleanly expose the caller's IP to a Code\n// node), but it stops one bad actor (or a leaked demo-form token) from\n// flooding Ollama/Airtable. Upgrade to a reverse-proxy rate limiter if\n// this ever moves beyond localhost.\nconst baseDir = path.join(os.homedir(), 'inquiry-triage-data');\nfs.mkdirSync(baseDir, { recursive: true });\nconst stateFile = path.join(baseDir, 'rate-limit-state.json');\n\nconst WINDOW_MS = 60 * 1000;\nconst MAX_REQUESTS = 10;\n\nlet history = [];\ntry {\n  history = JSON.parse(fs.readFileSync(stateFile, 'utf-8'));\n  if (!Array.isArray(history)) history = [];\n} catch (e) {\n  history = [];\n}\n\nconst now = Date.now();\nhistory = history.filter((t) => now - t < WINDOW_MS);\n\nconst overLimit = history.length >= MAX_REQUESTS;\nif (!overLimit) {\n  history.push(now);\n}\n\nfs.writeFileSync(stateFile, JSON.stringify(history), 'utf-8');\n\nreturn [{ json: { ...$input.first().json, _rateLimited: overLimit ? 'true' : 'false' } }];"
+      },
+      "id": "1a1b1c1d-0008-4000-8000-000000000008",
+      "name": "Rate Limit Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-80, 150]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json._rateLimited }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1a1b1c1d-0009-4000-8000-000000000009",
+      "name": "IF: Rate Limited?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [40, 150]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    error: true,\n    message: 'Too many requests - please wait a minute and try again.'\n  }\n}];"
+      },
+      "id": "1a1b1c1d-0010-4000-8000-000000000010",
+      "name": "Rate Limited Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [40, 300]
+    },
+    {
+      "parameters": {
         "method": "POST",
         "url": "http://127.0.0.1:11434/api/generate",
         "sendBody": true,
@@ -44,7 +93,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst webhookData = $('Inquiry Webhook').first().json;\nconst originalMessage = (webhookData.body && webhookData.body.message) ? webhookData.body.message : '';\n\nif (input.error) {\n  const errText = JSON.stringify(input.error);\n  const modelNotFound = /model .* not found/i.test(errText);\n  const reason = modelNotFound\n    ? 'The model set in the \"Ollama Draft + Classify\" node is not pulled on this machine. Run `ollama pull <model name>`, or edit the model field in that node to one you already have - see the README for picking a model based on your RAM.'\n    : 'Could not reach Ollama - is it running? (' + input.error.message + ')';\n  return [{\n    json: {\n      category: '',\n      urgency: '',\n      reply: '',\n      valid: false,\n      reasons: [reason],\n      original_message: originalMessage,\n      checked_at: new Date().toISOString()\n    }\n  }];\n}\n\nconst raw = input.response || '';\n\nconst categoryMatch = raw.match(/CATEGORY:\\s*(.+)/i);\nconst urgencyMatch = raw.match(/URGENCY:\\s*(.+)/i);\nconst replyMatch = raw.match(/REPLY:\\s*([\\s\\S]+)/i);\n\nconst category = categoryMatch ? categoryMatch[1].trim() : '';\nconst urgency = urgencyMatch ? urgencyMatch[1].trim() : '';\nconst reply = replyMatch ? replyMatch[1].trim() : '';\n\nconst reasons = [];\n\nif (!originalMessage || !originalMessage.trim()) {\n  reasons.push('No inquiry message received - malformed or empty webhook payload');\n}\n\nif (!category || !urgency || !reply) {\n  reasons.push('Missing CATEGORY, URGENCY, or REPLY section - could not parse model output');\n}\n\nif (/\\$\\s?\\d/.test(reply)) {\n  reasons.push('Reply contains a dollar amount - no pricing promises allowed');\n}\n\nif (/\\b\\d{3}[-.]?\\d{3}[-.]?\\d{4}\\b/.test(reply) || /\\b[\\w.+-]+@[\\w-]+\\.[a-zA-Z]{2,}\\b/.test(reply)) {\n  reasons.push('Reply may contain PII (phone number or email address)');\n}\n\nif (reply.length > 800) {\n  reasons.push(`Reply too long (${reply.length} chars, cap is 800)`);\n}\n\nconst disclaimer = 'This is an automated draft pending review by our team.';\nif (!reply.includes(disclaimer)) {\n  reasons.push('Required disclaimer sentence missing');\n}\n\nreturn [{\n  json: {\n    category,\n    urgency,\n    reply,\n    valid: reasons.length === 0,\n    reasons,\n    original_message: originalMessage,\n    checked_at: new Date().toISOString()\n  }\n}];"
+        "jsCode": "const input = $input.first().json;\nconst webhookData = $('Inquiry Webhook').first().json;\nconst originalMessage = (webhookData.body && webhookData.body.message) ? webhookData.body.message : '';\nconst name = (webhookData.body && webhookData.body.name) ? webhookData.body.name : '';\nconst email = (webhookData.body && webhookData.body.email) ? webhookData.body.email : '';\n\nif (input.error) {\n  const errText = JSON.stringify(input.error);\n  const modelNotFound = /model .* not found/i.test(errText);\n  const reason = modelNotFound\n    ? 'The model set in the \"Ollama Draft + Classify\" node is not pulled on this machine. Run `ollama pull <model name>`, or edit the model field in that node to one you already have - see the README for picking a model based on your RAM.'\n    : 'Could not reach Ollama - is it running? (' + input.error.message + ')';\n  return [{\n    json: {\n      category: '',\n      urgency: '',\n      reply: '',\n      valid: false,\n      reasons: [reason],\n      original_message: originalMessage,\n      name,\n      email,\n      checked_at: new Date().toISOString()\n    }\n  }];\n}\n\nconst raw = input.response || '';\n\nconst categoryMatch = raw.match(/CATEGORY:\\s*(.+)/i);\nconst urgencyMatch = raw.match(/URGENCY:\\s*(.+)/i);\nconst replyMatch = raw.match(/REPLY:\\s*([\\s\\S]+)/i);\n\nconst category = categoryMatch ? categoryMatch[1].trim() : '';\nconst urgency = urgencyMatch ? urgencyMatch[1].trim() : '';\nconst reply = replyMatch ? replyMatch[1].trim() : '';\n\nconst reasons = [];\n\nif (!originalMessage || !originalMessage.trim()) {\n  reasons.push('No inquiry message received - malformed or empty webhook payload');\n}\n\nif (!category || !urgency || !reply) {\n  reasons.push('Missing CATEGORY, URGENCY, or REPLY section - could not parse model output');\n}\n\nif (/\\$\\s?\\d/.test(reply)) {\n  reasons.push('Reply contains a dollar amount - no pricing promises allowed');\n}\n\nif (/\\b\\d{3}[-.]?\\d{3}[-.]?\\d{4}\\b/.test(reply) || /\\b[\\w.+-]+@[\\w-]+\\.[a-zA-Z]{2,}\\b/.test(reply)) {\n  reasons.push('Reply may contain PII (phone number or email address)');\n}\n\nif (reply.length > 800) {\n  reasons.push(`Reply too long (${reply.length} chars, cap is 800)`);\n}\n\nconst disclaimer = 'This is an automated draft pending review by our team.';\nif (!reply.includes(disclaimer)) {\n  reasons.push('Required disclaimer sentence missing');\n}\n\nreturn [{\n  json: {\n    category,\n    urgency,\n    reply,\n    valid: reasons.length === 0,\n    reasons,\n    original_message: originalMessage,\n    name,\n    email,\n    checked_at: new Date().toISOString()\n  }\n}];"
       },
       "id": "1a1b1c1d-0003-4000-8000-000000000003",
       "name": "Parse & Validate",
@@ -54,18 +103,130 @@
     },
     {
       "parameters": {
-        "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst os = require('os');\n\nconst item = $input.first().json;\n\n// Resolved at runtime from the current user's home directory - no\n// username or machine-specific path is ever baked into this file.\n// n8n's Code node sandbox has no `process` global, so this can't read\n// an env var; edit this line directly if you want a different folder.\nconst baseDir = path.join(os.homedir(), 'inquiry-triage-data');\nconst subfolder = item.valid ? \"review-queue\" : \"flagged\";\nconst dir = path.join(baseDir, subfolder);\nfs.mkdirSync(dir, { recursive: true });\n\nconst filename = `inquiry-${Date.now()}.json`;\nconst filepath = path.join(dir, filename);\n\nfs.writeFileSync(filepath, JSON.stringify(item, null, 2), 'utf-8');\n\nreturn [{\n  json: {\n    ...item,\n    saved_to: filepath\n  }\n}];"
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const entry of items) {\n  const item = entry.json;\n  results.push({\n    json: {\n      Name: item.name || '',\n      Email: item.email || '',\n      Message: item.original_message || '',\n      'Draft Reply': item.reply || '',\n      Classification: item.category || '',\n      Status: item.valid ? 'Needs Review' : 'Flagged',\n      Date: item.checked_at,\n    },\n  });\n}\n\nreturn results;"
       },
       "id": "1a1b1c1d-0004-4000-8000-000000000004",
-      "name": "Write to Review Queue or Flagged",
+      "name": "Format for Airtable",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [520, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.Status }}",
+              "rightValue": "Flagged",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1a1b1c1d-0005-4000-8000-000000000005",
+      "name": "If: Flagged?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [760, 0]
+    },
+    {
+      "parameters": {
+        "authentication": "airtableTokenApi",
+        "resource": "record",
+        "operation": "create",
+        "base": {
+          "mode": "list",
+          "value": ""
+        },
+        "table": {
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": null
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "id": "1a1b1c1d-0006-4000-8000-000000000006",
+      "name": "Airtable Create - Flagged",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [1000, -120]
+    },
+    {
+      "parameters": {
+        "authentication": "airtableTokenApi",
+        "resource": "record",
+        "operation": "create",
+        "base": {
+          "mode": "list",
+          "value": ""
+        },
+        "table": {
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": null
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "id": "1a1b1c1d-0007-4000-8000-000000000007",
+      "name": "Airtable Create - Needs Review",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [1000, 120]
     }
   ],
   "connections": {
     "Inquiry Webhook": {
       "main": [
+        [
+          {
+            "node": "Rate Limit Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limit Check": {
+      "main": [
+        [
+          {
+            "node": "IF: Rate Limited?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Rate Limited?": {
+      "main": [
+        [
+          {
+            "node": "Rate Limited Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Ollama Draft + Classify",
@@ -90,7 +251,36 @@
       "main": [
         [
           {
-            "node": "Write to Review Queue or Flagged",
+            "node": "Format for Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format for Airtable": {
+      "main": [
+        [
+          {
+            "node": "If: Flagged?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If: Flagged?": {
+      "main": [
+        [
+          {
+            "node": "Airtable Create - Flagged",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Airtable Create - Needs Review",
             "type": "main",
             "index": 0
           }

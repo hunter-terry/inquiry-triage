@@ -2,11 +2,63 @@
 (living "where I'm at" note - keep updating this as you go)
 
 ## One-liner
-Self-hosted n8n workflow: webhook intake -> local Ollama drafts a reply
-and classifies it -> validation against business rules -> passing
-drafts go to a review queue, nothing auto-sends. Closes the n8n skill
+Self-hosted n8n workflow: a real contact-form webhook intake -> local
+Ollama drafts a reply and classifies it -> validation against business
+rules -> passing drafts go to Airtable as "Needs Review", failing ones
+as "Flagged" (phone-visible, nothing auto-sends). Closes the n8n skill
 gap flagged in the vault's CONTEXT.md; portfolio piece, not a paid
 client project.
+
+## Where I'm at right now (update, 2026-07-14)
+Gave this a real front door and back door instead of the scrapped video
+demo (see root CONTEXT.md and `playbooks/demo-recording.md`'s "Strategy
+update"):
+- `demo-form.html` (gitignored, real token; `demo-form.example.html` is
+  the committed template) — a "Harbor & Co." contact form that POSTs
+  straight to the webhook using the existing header-auth token. Opens
+  standalone via plain double-click, no server needed (confirmed n8n's
+  webhook responds to the `null` origin `file://` pages send, via a
+  direct CORS preflight check).
+- Output moved from local `review-queue/`/`flagged/` files to a new
+  Airtable table (`Inquiries`, same base as the Leads table) - added a
+  "Format for Airtable" Code node and an If node routing on `valid`
+  into two new Airtable Create nodes ("Needs Review" / "Flagged").
+- Tested for real 3 times (2 via curl, 1 through an actual browser
+  submitting the real form): a clean inquiry (correctly classified
+  "general", landed as Needs Review), a prompt-injection attempt asking
+  for an exact price (model complied and quoted $4,995-$9,995,
+  validation caught it, landed as Flagged), and an urgent complaint
+  (correctly classified, though the model hallucinated a wrong name in
+  the reply - a real, honest model-quality quirk worth knowing about,
+  not a validation gap since name-accuracy isn't a rule that's checked).
+- Hit a real, since-fixed n8n bug along the way (this n8n version has a
+  separate draft/published-version model; `update:workflow --active`
+  doesn't reliably republish) - full writeup in the vault's
+  `playbooks/fixes-log.md` and `playbooks/automation-platforms.md`.
+
+## Where I'm at right now (update, 2026-07-13)
+Closed the auth gap flagged 2026-07-12: generated a real token, created
+`credentials.json` (gitignored, matches `credentials.example.json`'s
+id/name so it auto-attaches to the Webhook node) and imported it with
+`npx n8n import:credentials`. Confirmed live: a request without
+`X-Webhook-Token` gets a clean `403`, a request with the correct token
+runs the full pipeline and returns `200`.
+Also hit and fixed a second, unrelated bug while testing this: n8n
+2.29.10 now blocks `fs`/`path`/`os` in Code nodes by default
+("Module 'fs' is disallowed"), which broke the final
+"Write to Review Queue or Flagged" step. Fixed with
+`NODE_FUNCTION_ALLOW_BUILTIN=fs,path,os` at n8n startup — this was
+already documented in the vault's `playbooks/fixes-log.md` from an
+earlier encounter on `lead-qualifier`, just hadn't been applied to this
+environment yet.
+
+Later the same day: pulled into a Terry Studio demo-recording session
+(Goal 1) that was ultimately scrapped by Hunter as unusable — see vault
+root CONTEXT.md and `playbooks/demo-recording.md` for what was learned.
+The `demo/` and `demo-inquiries/` folders created for it have been
+deleted (scratch work, not shipped project content). No video exists
+from this session. The auth-credential and env-var fixes above are
+still real and still in place.
 
 ## Where I'm at right now (2026-07-11)
 Built and tested. Workflow runs: Webhook -> Ollama Draft + Classify ->

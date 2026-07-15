@@ -32,5 +32,26 @@ actual webhook, not code-reading. Tested 2026-07-11.
 **Fix:** added `onError: continueRegularOutput` to the HTTP Request node and taught the validation node to detect the error and produce a normal, readable failure result instead of crashing.
 **Retest:** PASS — clean JSON response, `valid: false`, reason: "Could not reach Ollama - is it running? (connect ECONNREFUSED 127.0.0.1:11434)", routed to `flagged/`. Matches the same refusal-path discipline as `listit.py`/`autosummary.py`.
 
+## Security audit fixes, verified live (2026-07-15)
+
+**Webhook token rotation.** Old token had appeared in a Claude Code
+session transcript, treated as burned per `standards/security.md`.
+Confirmed: request with the old token now gets `403`; new token is
+accepted through to the workflow. `credentials.json`, `demo-form.html`,
+and n8n's own credential store were all updated together.
+
+**Rate limiting added, not yet fully re-verified end-to-end.** A global
+sliding-window cap (10 requests/min) was added on the `Inquiry Webhook`
+entry point, ahead of the Ollama call. This workflow's Airtable nodes
+(added since the last commit, base/table not yet re-selected after a
+fresh import) currently make every execution abort at n8n's
+pre-execution parameter validation regardless of which branch would
+actually run — so a true 11-requests-in-a-row rate-limit test couldn't
+be completed yet. Confirmed by direct inspection that the Rate Limit
+Check / IF / Rate Limited Response nodes and their wiring imported
+correctly (visible in the workflow's node list); full behavioral proof
+is pending the Airtable Base/Table re-wiring (manual UI step, see
+CONTEXT.md).
+
 ## Summary
 6 real test cases, 2 real bugs found through actual testing (not just reading the code) and fixed. Validation branch proven to work against a genuine adversarial input (prompt injection), not just a contrived one.
