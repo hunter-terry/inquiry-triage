@@ -9,6 +9,22 @@ as "Flagged" (phone-visible, nothing auto-sends). Closes the n8n skill
 gap flagged in the vault's CONTEXT.md; portfolio piece, not a paid
 client project.
 
+## Where I'm at right now (update, 2026-07-15)
+Full security audit (all 3 n8n portfolio pieces, at Hunter's request)
+found and fixed 2 real issues here: the webhook token had been shown at
+length in a Claude Code session transcript, so treated as burned and
+rotated (old token now gets `403`, confirmed live); and a 10 req/min
+rate limiter was added ahead of the Ollama call (Code node + IF, global
+sliding window — not per-IP, n8n's Webhook node doesn't cleanly expose
+caller IP to a Code node). Full findings + fixes across all 3 projects:
+vault root `playbooks/fixes-log.md`. Verified end-to-end against a real
+Airtable write (`execution_entity.status='success'`, not just "no
+error") after re-wiring the Airtable nodes' Base/Table pickers by hand
+in the UI — required again because the audit also caught (and
+sanitized) real Airtable IDs that had leaked into `workflow.json`'s
+committed form; see `lead-qualifier-crm`'s CONTEXT.md for that finding,
+which applied to this project too since both share the pattern.
+
 ## Where I'm at right now (update, 2026-07-14)
 Gave this a real front door and back door instead of the scrapped video
 demo (see root CONTEXT.md and `playbooks/demo-recording.md`'s "Strategy
