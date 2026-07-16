@@ -9,6 +9,45 @@ as "Flagged" (phone-visible, nothing auto-sends). Closes the n8n skill
 gap flagged in the vault's CONTEXT.md; portfolio piece, not a paid
 client project.
 
+## Where I'm at right now (update, 2026-07-15, retry fix republished)
+Republished the retry fix from the checklist audit below (`retryOnFail`
+on the Ollama node) - n8n was down when that fix landed, so it had never
+actually gone live until now. Doing so hit the same Airtable Base/Table
+reset the 2026-07-15 audit below already knew about, but this time it
+happened on a code-only change with zero Airtable-node edits, which
+exposed that "expect to redo this by hand" was a real recurring cost,
+not a one-off. Fixed properly instead: switched `Airtable Create -
+Needs Review` / `- Flagged` to reference `$env.AIRTABLE_BASE_ID` /
+`$env.AIRTABLE_INQUIRIES_TABLE_ID` as expressions rather than
+live-picked values, and added the missing `credentials` link both nodes
+had never actually had in the committed file (a separate bug from the
+Base/Table one, same root cause - see the vault's `fixes-log.md` and
+`playbooks/automation-platforms.md` for full detail, not duplicated
+here). Verified end-to-end after the fix: execution 915,
+`execution_entity.status='success'`, real Airtable record written
+(`recwbZfjRXz8X7k6y`). Both `workflow.json` and vault-root docs updated
+and consistent; not yet committed in this project's own repo (only the
+vault-root docs were touched as new files/edits this session need a
+separate commit decision).
+
+## Where I'm at right now (update, 2026-07-15, checklist audit)
+Ran the vault's new `standards/security-standard.md` checklist against this
+workflow (first real test of the vault's new `verify-against-standard`
+skill). Confirmed `credentials.json` and `demo-form.html` were never
+actually tracked in git (checked `git ls-files`, not just `.gitignore`).
+Found one real gap the earlier manual audit missed: the "Ollama Draft +
+Classify" node had a timeout but no retry — a transient failure failed
+clean instead of retrying. Fixed in `workflow.json`: added
+`retryOnFail: true, maxTries: 3, waitBetweenTries: 2000` (n8n's retry is
+fixed-interval, not true exponential backoff — a platform limitation, not
+a choice). **Not yet republished** — n8n wasn't running when this fix was
+made; needs `npx n8n import:workflow --input=workflow.json` +
+`publish:workflow` + restart next time n8n is up, then a real test call
+to confirm nothing broke, per this vault's documented draft/publish
+quirk. HTTP-not-HTTPS between local nodes left as-is — already tracked as
+an accepted, in-scope-for-now item in the vault's
+`project_n8n_client_ready_roadmap` memory.
+
 ## Where I'm at right now (update, 2026-07-15)
 Full security audit (all 3 n8n portfolio pieces, at Hunter's request)
 found and fixed 2 real issues here: the webhook token had been shown at

@@ -89,7 +89,10 @@
       "typeVersion": 4.2,
       "position": [40, 0],
       "onError": "continueRegularOutput",
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "parameters": {
@@ -146,12 +149,12 @@
         "resource": "record",
         "operation": "create",
         "base": {
-          "mode": "list",
-          "value": ""
+          "mode": "id",
+          "value": "={{ $env.AIRTABLE_BASE_ID }}"
         },
         "table": {
-          "mode": "list",
-          "value": ""
+          "mode": "id",
+          "value": "={{ $env.AIRTABLE_INQUIRIES_TABLE_ID }}"
         },
         "columns": {
           "mappingMode": "autoMapInputData",
@@ -165,7 +168,13 @@
       "name": "Airtable Create - Flagged",
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.2,
-      "position": [1000, -120]
+      "position": [1000, -120],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "oQ7aYOPIVZobJxdJ",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
     },
     {
       "parameters": {
@@ -173,12 +182,12 @@
         "resource": "record",
         "operation": "create",
         "base": {
-          "mode": "list",
-          "value": ""
+          "mode": "id",
+          "value": "={{ $env.AIRTABLE_BASE_ID }}"
         },
         "table": {
-          "mode": "list",
-          "value": ""
+          "mode": "id",
+          "value": "={{ $env.AIRTABLE_INQUIRIES_TABLE_ID }}"
         },
         "columns": {
           "mappingMode": "autoMapInputData",
@@ -192,7 +201,13 @@
       "name": "Airtable Create - Needs Review",
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.2,
-      "position": [1000, 120]
+      "position": [1000, 120],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "oQ7aYOPIVZobJxdJ",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
     }
   ],
   "connections": {
