@@ -75,7 +75,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://127.0.0.1:11434/api/generate",
+        "url": "={{ $env.AI_PROVIDER_URL || 'http://127.0.0.1:11434/api/generate' }}",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ model: \"llama3.1:8b\", stream: false, prompt: \"No thinking, no preamble, no markdown. You are drafting a first-response email to a customer inquiry for a small business. Output EXACTLY this shape and nothing else:\\n\\nCATEGORY: <one word: pricing, support, general, complaint>\\nURGENCY: <one word: low, medium, high>\\nREPLY: <a short, friendly draft reply. Do not quote a specific price. Do not make promises about timelines. Always include this exact sentence somewhere in the reply: This is an automated draft pending review by our team. Do not include any customer personal data beyond their first name if given.>\\n\\nCustomer inquiry:\\n\" + $json.body.message }) }}",
@@ -172,7 +172,7 @@
       "credentials": {
         "airtableTokenApi": {
           "id": "oQ7aYOPIVZobJxdJ",
-          "name": "Airtable Personal Access Token account"
+          "name": "Airtable Credential"
         }
       }
     },
@@ -205,7 +205,7 @@
       "credentials": {
         "airtableTokenApi": {
           "id": "oQ7aYOPIVZobJxdJ",
-          "name": "Airtable Personal Access Token account"
+          "name": "Airtable Credential"
         }
       }
     }

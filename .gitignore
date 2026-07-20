@@ -3,3 +3,6 @@ flagged/
 node_modules/
 credentials.json
 demo-form.html
+
+# Local Airtable target IDs (not secrets, but machine-specific)
+.env
