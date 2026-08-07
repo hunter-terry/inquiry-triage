@@ -1,4 +1,4 @@
-{
+﻿{
   "id": "inquiry-triage-001",
   "name": "inquiry-triage",
   "nodes": [
@@ -171,7 +171,7 @@
       "position": [1000, -120],
       "credentials": {
         "airtableTokenApi": {
-          "id": "oQ7aYOPIVZobJxdJ",
+          "id": "",
           "name": "Airtable Credential"
         }
       }
@@ -204,7 +204,7 @@
       "position": [1000, 120],
       "credentials": {
         "airtableTokenApi": {
-          "id": "oQ7aYOPIVZobJxdJ",
+          "id": "",
           "name": "Airtable Credential"
         }
       }
